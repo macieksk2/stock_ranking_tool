@@ -35,20 +35,20 @@ if __name__ == '__main__':
     print('QUANTITATIVE PART')
     print('*************************************************')
     if config['use_quant']:
-        income_df, balance_df, cash_flow_df, market_caps = create_df_yf(tickers)
+        income_df, balance_df, cash_flow_df, info = create_df_yf(tickers)
         for ticker in tickers:
             income_df[ticker].to_excel(str("output\stock_quant_scores"    + "\\" + ticker + "_income_df.xlsx"))
             balance_df[ticker].to_excel(str("output\stock_quant_scores"   + "\\" + ticker + "_balance_df.xlsx"))
             cash_flow_df[ticker].to_excel(str("output\stock_quant_scores" + "\\" + ticker + "_cash_flow_df.xlsx"))
-            pd.DataFrame([market_caps[ticker]]).to_excel(str("output\stock_quant_scores" + "\\" + ticker + "_market_cap.xlsx"))
+            pd.DataFrame([info[ticker]]).to_excel(str("output\stock_quant_scores" + "\\" + ticker + "_info.xlsx"))
     # False - feed file by file from excels
     else:
-        income_df, balance_df, cash_flow_df, market_caps = dict(), dict(), dict(), dict()
+        income_df, balance_df, cash_flow_df, info = dict(), dict(), dict(), dict()
         for ticker in tickers:
             income_df[ticker]    = pd.read_excel(str("output\stock_quant_scores" + "\\" + ticker + "_income_df.xlsx"))
             balance_df[ticker]   = pd.read_excel(str("output\stock_quant_scores" + "\\" + ticker + "_balance_df.xlsx"))
             cash_flow_df[ticker] = pd.read_excel(str("output\stock_quant_scores" + "\\" + ticker + "_cash_flow_df.xlsx"))
-            market_caps[ticker]  = pd.read_excel(str("output\stock_quant_scores" + "\\" + ticker + "_market_cap.xlsx"))
+            info[ticker]         = pd.read_excel(str("output\stock_quant_scores" + "\\" + ticker + "_info.xlsx"))
     
     for ticker in tickers:
         print('*****************************')
@@ -58,16 +58,63 @@ if __name__ == '__main__':
         # Growth measures
         revenue_growth, eps_growth, fcf_growth = calc_income_fcf_metrics(income_df[ticker], cash_flow_df[ticker], years = 3)
         # Margin measures
-        gross_margin_avg, net_margin_avg       = calc_margin_measures(income_df[ticker], years = 3)
+        gross_margin_avg, net_margin_avg  = calc_margin_measures(income_df[ticker], years = 3)
         # Balance sheet measures
         # D/E set to negative since the lower the better
         d_e_ratio, current_ratio, quick_ratio  = calc_balance_measures(balance_df[ticker])
-        # Altman Z-score to measure risk of company default
-        z_score = calc_altman_z(income_df[ticker], balance_df[ticker], market_caps[ticker][0][0])
         # Number of years with positive EPS and FCF
         no_y_pos_eps, no_y_pos_fcf = calc_no_y_pos_msr(income_df[ticker], 'Basic EPS'), calc_no_y_pos_msr(cash_flow_df[ticker], 'Free Cash Flow')
         # %change in shares outstanding (negative since the largest decrease the better and vice versa)
         shares_chg = -calc_shares_change(income_df[ticker], 'Basic Average Shares')
+        # Pull metrics from infos, based on type of input (online or from excel)
+        if config['use_quant']:
+            marketCap = info[ticker]['marketCap']
+            pb_ratio = -info[ticker]['priceToBook']
+            ps_ratio = -info[ticker]['priceToSalesTrailing12Months']
+            if 'forwardPE' in info[ticker].keys():
+                pe_ratio = -info[ticker]['forwardPE']
+            elif 'trailingPE' in info[ticker].keys():
+                pe_ratio = -info[ticker]['trailingPE']
+            else:
+                pe_ratio = -100
+                
+            if 'enterpriseToEbitda' in info[ticker].keys():
+                ev_ebitda = -info[ticker]['enterpriseToEbitda']
+            elif 'enterpriseToRevenue' in info[ticker].keys():
+                ev_ebitda = -info[ticker]['enterpriseToRevenue']
+            else:
+                ev_ebitda = -100
+            # Extract beta --> negative since, in this case, it is interpreted as the higher the worst (prefer lower vol)
+            beta = -100 * info[ticker]['beta']
+        else:
+            marketCap = info[ticker]['marketCap'][0]
+            pb_ratio = -info[ticker]['priceToBook'][0]
+            ps_ratio = -info[ticker]['priceToSalesTrailing12Months'][0]
+            if 'forwardPE' in info[ticker].keys():
+                pe_ratio = -info[ticker]['forwardPE'][0]
+            elif 'trailingPE' in info[ticker].keys():
+                pe_ratio = -info[ticker]['trailingPE'][0]
+            else:
+                pe_ratio = -100
+                
+            if 'enterpriseToEbitda' in info[ticker].keys():
+                ev_ebitda = -info[ticker]['enterpriseToEbitda'][0]
+            elif 'enterpriseToRevenue' in info[ticker].keys():
+                ev_ebitda = -info[ticker]['enterpriseToRevenue'][0]
+            else:
+                ev_ebitda = -100
+            # Extract beta --> negative since, in this case, it is interpreted as the higher the worst (prefer lower vol)
+            beta = -100 * info[ticker]['beta'][0]
+        
+        # Calculate scaled volatility of eps --> negative since the higher the worst
+        scaled_vol = -100 * np.std(income_df[ticker]['Basic EPS']) / np.mean(abs(income_df[ticker]['Basic EPS']))
+    
+        # Altman Z-score to measure risk of company default
+        z_score = calc_altman_z(income_df[ticker], balance_df[ticker], marketCap)
+        # Accrual ratio (earnings vs cash flow) --> negative (high income not backed by cash is a red flag)
+        accrual_rat = -100 * (income_df[ticker]['Net Income'].iloc[0] - cash_flow_df[ticker]['Operating Cash Flow'].iloc[0]) / balance_df[ticker]['Total Assets'].iloc[0]
+        # Cash Conversion Ratio
+        cash_conv_rat = 10 * cash_flow_df[ticker]['Operating Cash Flow'].iloc[0] / income_df[ticker]['Net Income'].iloc[0] 
         # Store the raw quantitative metrics
         metrics_data[ticker] = {
             'revenue_growth'  : revenue_growth,
@@ -81,7 +128,15 @@ if __name__ == '__main__':
             'z_score'         : z_score,
             'no_y_pos_eps'    : no_y_pos_eps,
             'no_y_pos_fcf'    : no_y_pos_fcf,
-            'shares_chg'      : shares_chg
+            'shares_chg'      : shares_chg,
+            'pe_ratio'        : pe_ratio, 
+            'ps_ratio'        : ps_ratio, 
+            'pb_ratio'        : pb_ratio,
+            'ev_ebitda'       : ev_ebitda,
+            'beta'            : beta,
+            'scaled_vol'      : scaled_vol,
+            'accrual_rat'     : accrual_rat,
+            'cash_conv_rat'   : cash_conv_rat
         }
     ################################################# QUALITATIVE PART #######################################
     print('*************************************************')

@@ -15,6 +15,10 @@ The metrics, which are taken into account:
 - Altman Z score
 - number of years with positive EPS / FCF - both enter the score multiplied by 10
 - % change in shares outstanding - multiplied by 100 (in percentage points), enters with negative sign given its reverse impact on the stock price
+- valuation metrics (P/E, P/B, P/S, EV/EBITDA)
+- volatiltiy metrics (beta, EPS st deviation to mean ratio)
+- accruals Ratio (earnings vs. cash flow)
+- cash conversion ratio (CFO / Net Income)
 
 #### 2. Qualitative Analysis
 The qualitative analysis focuses on non-numerical factors that can provide a competitive advantage, often referred to as a "moat." This part of the model performs sentiment analysis on earnings call transcripts. A qualitative score is created by combining scores from sentiment, moat, and leadership factors. The qualitative rank is then calculated based on this combined score.

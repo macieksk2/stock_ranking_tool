@@ -41,13 +41,13 @@ def get_financials_yf(ticker, statement_type):
         data = stock.balance_sheet
     elif statement_type == 'cashflow':
         data = stock.cashflow
-    elif statement_type == 'marketCap':
-        data = stock.info['marketCap']
+    elif statement_type == 'info':
+        data = stock.info
     else:
         print(f"Invalid statement_type: {statement_type}")
         return None
     
-    if statement_type != "marketCap":
+    if statement_type != "info":
         if data.empty:
             print(f"No data found for {ticker} for {statement_type}.")
             return None
@@ -64,7 +64,7 @@ def create_df_yf(tickers):
     income_dfs = {}
     balance_dfs = {}
     cash_flow_dfs = {}
-    market_caps = {}
+    info = {}
 
     for ticker in tickers:
         try:
@@ -72,7 +72,7 @@ def create_df_yf(tickers):
             income_df = get_financials_yf(ticker, 'income')
             balance_df = get_financials_yf(ticker, 'balance')
             cash_flow_df = get_financials_yf(ticker, 'cashflow')
-            market_cap = get_financials_yf(ticker, 'marketCap')
+            info_dict = get_financials_yf(ticker, 'info')
 
             if income_df is None or balance_df is None or cash_flow_df is None:
                 continue
@@ -82,12 +82,12 @@ def create_df_yf(tickers):
             income_dfs[ticker] = income_df.transpose()
             balance_dfs[ticker] = balance_df.transpose()
             cash_flow_dfs[ticker] = cash_flow_df.transpose()
-            market_caps[ticker] = market_cap
+            info[ticker] = info_dict
 
         except Exception as e:
             print(f"Could not process data for {ticker}. Error: {e}")
 
-    return income_dfs, balance_dfs, cash_flow_dfs, market_caps
+    return income_dfs, balance_dfs, cash_flow_dfs, info
 # for FMP only
 API_KEY = "O7jpbikr5wCjo34KFLWi9nmU3xJ9laxh"
 
@@ -494,7 +494,16 @@ def create_pdf_report(image_folder, output_pdf):
     
     # Get a list of all PNG files in the folder and sort them
     image_files = ["_bar_chart_Final Rank.png", 
-                   "_bar_chart_Quant Rank.png", "_bar_chart_revenue_growth_rank.png", "_bar_chart_eps_growth_rank.png", "_bar_chart_gross_margin_avg_rank.png", "_bar_chart_net_margin_avg_rank.png", "_bar_chart_fcf_growth_rank.png", "_bar_chart_d_e_ratio_rank.png", "_bar_chart_curr_ratio_rank.png", "_bar_chart_quick_ratio_rank.png","_bar_chart_z_score_rank.png", "_bar_chart_no_y_pos_eps_rank.png", "_bar_chart_no_y_pos_fcf_rank.png", "_bar_chart_shares_chg_rank.png",
+                   "_bar_chart_Quant Rank.png", "_bar_chart_revenue_growth_rank.png", "_bar_chart_eps_growth_rank.png",
+                   "_bar_chart_gross_margin_avg_rank.png", "_bar_chart_net_margin_avg_rank.png", 
+                   "_bar_chart_fcf_growth_rank.png", "_bar_chart_d_e_ratio_rank.png", 
+                   "_bar_chart_curr_ratio_rank.png", "_bar_chart_quick_ratio_rank.png",
+                   "_bar_chart_z_score_rank.png", "_bar_chart_no_y_pos_eps_rank.png", 
+                   "_bar_chart_no_y_pos_fcf_rank.png", "_bar_chart_shares_chg_rank.png",
+                   "_bar_chart_pe_ratio_rank.png", "_bar_chart_ps_ratio_rank.png",
+                   "_bar_chart_pb_ratio_rank.png", "_bar_chart_ev_ebitda_rank.png", 
+                   "_bar_chart_beta_rank.png", "_bar_chart_scaled_vol_rank.png",
+                   "_bar_chart_accrual_rat_rank.png", "_bar_chart_cash_conv_rat_rank.png",
                    "_bar_chart_Qual Rank.png", "_bar_chart_MOAT Quant Score.png", "_bar_chart_MOAT Text Score.png", "_bar_chart_Management Score.png", "_bar_chart_Sentiment Score.png",
                    "_bar_chart_External Rating Score.png"]
 

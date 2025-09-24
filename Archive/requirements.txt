@@ -1,0 +1,13 @@
+beautifulsoup4==4.13.5
+matplotlib==3.10.5
+nltk==3.9.1
+numpy==2.2.6
+openpyxl==3.1.5
+pandas==2.3.2
+PIL==11.3.0
+regex==2025.9.1
+reportlab==4.4.4
+requests==2.32.5
+scikit-learn==1.7.1
+scipy==1.15.3
+yfinance==0.2.65
