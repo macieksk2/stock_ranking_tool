@@ -5,7 +5,7 @@ This project is a Python-based framework for calculating the average rank of sel
 * **Quantitative Analysis**: Fetches financial data (income, balance, cash flow) for multiple tickers from Yahoo Finance and ranks them based on user-defined weights.
 * **Qualitative Analysis**: Analyzes earnings call transcripts for sentiment and qualitative "moat" factors.
 * **External Ratings**: Parses a PDF document to extract and integrate external analyst ratings into the final score.
-* **Customizable**: All tickers, scoring weights, and data sources are easily configurable in the `params.py` file.
+* **Customizable**: All tickers, scoring weights, and data sources are easily configurable in the `params.yaml` file.
 
 ### Prerequisites
 Before running the script, ensure you have Python 3.x installed. The required libraries can be installed using the `requirements.txt` file.
@@ -53,7 +53,7 @@ Project Structure
 ├── main.py                    # Main script to run the analysis
 └── requirements.txt           # List of required Python libraries
 input
-├── params.py                  # User input and configuration
+├── params.yaml                # User input and configuration
 ├── StockScan_grudzien_2024_fin-laqvwb.pdf # Input file with external ratings
 utils
 ├── utils.py                   # Helper functions for quantitative and qualitative analysis

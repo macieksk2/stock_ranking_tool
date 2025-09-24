@@ -5,7 +5,7 @@ The framework employs a three-stage approach to rank stocks, combining quantitat
 #### 1. Quantitative Analysis
 This part of the model assesses a company's financial health based on its fundamental data. It retrieves income statements, balance sheets, and cash flow statements from Yahoo Finance. The model calculates various metrics such as revenue growth, earnings per share (EPS) growth, free cash flow (FCF) growth, average margin or Altman Z score. Each of these metrics is then ranked across the selected group of stocks.
 
-The quantitative score is a **weighted average** of the individual metrics, where the weights are defined by the user in the `quant_weights` dictionary in `params.py`.
+The quantitative score is a **weighted average** of the individual metrics, where the weights are defined by the user in the `quant_weights` dictionary in `params.yaml`.
 Finally, the rank of each stock is determined, which further enters Final rank estimation.
 
 The metrics, which are taken into account:

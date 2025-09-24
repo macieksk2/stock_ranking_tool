@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Sep 16 20:09:58 2025
-
-@author: macie
+main file of Stock Scorecard framework
 """
 import os
 import pandas as pd
 import numpy as np
 import requests
 import re
+import yaml
+from yaml.loader import SafeLoader
 
 import yfinance as yf
 from bs4 import BeautifulSoup
@@ -18,8 +18,13 @@ from nltk.sentiment import SentimentIntensityAnalyzer
 from utils.utils import *
 from utils.utils_parse_Cymcyk import *
 # import input parameters
-from input.params import *
+# Load input parameters from YAML file
+with open('input/params.yaml', 'r') as f:
+    config = yaml.load(f, Loader=SafeLoader)
+
 ############################################################## INPUT #################################################
+tickers = config['tickers']
+
 # Master dictionary to store all scores for all tickers
 master_scores = {}
 metrics_data = {ticker: {} for ticker in tickers}
@@ -28,7 +33,8 @@ if __name__ == '__main__':
     ############################################### QUANTITATIVE PART #######################################
     print('*************************************************')
     print('QUANTITATIVE PART')
-    if DO_PULL_QUANT:
+    print('*************************************************')
+    if config['use_quant']:
         income_df, balance_df, cash_flow_df, market_caps = create_df_yf(tickers)
         for ticker in tickers:
             income_df[ticker].to_excel(str("output\stock_quant_scores"    + "\\" + ticker + "_income_df.xlsx"))
@@ -47,6 +53,7 @@ if __name__ == '__main__':
     for ticker in tickers:
         print('*****************************')
         print(ticker)
+        print('*************************************************')
         # --- Quantitative Metric Calculation ---
         # Growth measures
         revenue_growth, eps_growth, fcf_growth = calc_income_fcf_metrics(income_df[ticker], cash_flow_df[ticker], years = 3)
@@ -79,16 +86,18 @@ if __name__ == '__main__':
     ################################################# QUALITATIVE PART #######################################
     print('*************************************************')
     print('QUALITATIVE PART')
+    print('*************************************************')
     # If False, it should read the score results from csv
-    if DO_PULL_QUAL:
+    if config['use_qual']:
         for ticker in tickers:
             # Define the list of companies to analyze
             # This list would be generated from your FMP data or a separate input file
-            companies_to_analyze = [{'ticker': ticker, 'website': inv_websites[ticker]}]
+            companies_to_analyze = [{'ticker': ticker, 'website': config['transcript_urls'][ticker]}]
         
             analyzer = CompanyAnalyzer(companies_to_analyze, income_df, balance_df, cash_flow_df, 
-                                       quant_moat_params, quant_moat_scores, moat_keywords, 
-                                       leadership_keywords, keyword_score_weight, sentiment_score_weight, qual_scorecard_weights)
+                                       config['quant_moat_params'], config['quant_moat_scores'], config['moat_keywords'], 
+                                       config['leadership_keywords'], config['keyword_score_weight'], config['sentiment_score_weight'], 
+                                       config['qual_scorecard_weights'])
             analyzer.run_analysis()
                         
             master_scores[ticker] = {'MOAT Text Score' :  analyzer.results[0]['Moat_Text_Score'],
@@ -108,8 +117,9 @@ if __name__ == '__main__':
     ############## QUALITATIVE PART FROM CYMCYK ###################################################################
     print('*************************************************')
     print('EXTERNAL RATING PART')
-    if DO_EXT_RATING:
-        external_ratings = get_analyst_rankings_from_pdf(pdf_path, tickers, ticker_mapping)
+    print('*************************************************')
+    if config['use_external']:
+        external_ratings = get_analyst_rankings_from_pdf(config['pdf_path'], tickers, config['ticker_mapping'])
         for ticker in tickers:
             master_scores[ticker]['External Rating'] = int(external_ratings[0][ticker])
     
@@ -119,12 +129,12 @@ if __name__ == '__main__':
     
     # Calculate the weighted average of the scores for the quantitative score
     metrics_df['Quant Score'] = 0  
-    for metric, weight in quant_weights.items():
+    for metric, weight in config['quant_weights'].items():
         metrics_df['Quant Score'] += metrics_df[metric] * weight
         
     # Rank each quantitative column. For ratios like D/E, a lower value is better, so ascending=True
     ranked_metrics = metrics_df.copy()
-    for metric in quant_weights.keys():
+    for metric in config['quant_weights'].keys():
         ranked_metrics[metric + '_rank'] = metrics_df[metric].rank(ascending=False)
     ranked_metrics['Quant Score'] = metrics_df['Quant Score']    
     ranked_metrics['Quant Score_rank'] = metrics_df['Quant Score'].rank(ascending=False)
@@ -135,17 +145,17 @@ if __name__ == '__main__':
     final_df['Management Score']  = pd.Series({t: master_scores[t]['Management Score'] for t in tickers})
     final_df['Sentiment Score']   = pd.Series({t: master_scores[t]['Sentiment Score'] for t in tickers})
     final_df['Qual Score']  = pd.Series({t: master_scores[t]['Qual Score'] for t in tickers})
-    if DO_EXT_RATING:
+    if config['use_external']:
         final_df['External Rating Score'] = pd.Series({t: master_scores[t]['External Rating'] for t in tickers})
     # Rank the final scores
     final_df['Quant Rank'] = final_df['Quant Score_rank']
     final_df['Qual Rank']  = final_df['Qual Score'].rank(ascending=False)
     final_df['Final Rank'] = (final_df['Quant Rank'] + final_df['Qual Rank']) / 2
     # If specified, include a rank of external rating into the composite rank
-    if DO_EXT_RATING:
+    if config['use_external']:
         final_df['External Rating Rank']  = final_df['External Rating Score'].rank(ascending=False)
         final_df['Final Rank'] = (final_df['Quant Rank'] + final_df['Qual Rank'] + final_df['External Rating Rank']) / 3
-    if not DO_EXT_RATING:
+    if not config['use_external']:
         print(final_df[['Quant Score', 'Qual Score', 'Quant Rank', 'Qual Rank', 'Final Rank']])
     else:
         print(final_df[['Quant Score', 'Qual Score', 'Quant Rank', 'Qual Rank', 'External Rating Rank', 'Final Rank']])
