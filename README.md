@@ -24,9 +24,9 @@ All user-specific inputs are managed in `params.py`. You can modify the followin
 * `DO_PULL_QUANT`: Set to `True` to pull quantitative data from Yahoo Finance; set to `False` to use local files.
 * `DO_PULL_QUAL` : Set to `True` to pull qualitative data from online sources; set to `False` to use local files.
 * `DO_EXT_RATING`: Set to `True` to parse the external ratings from the PDF file.
-## QUANTITATIVE PART
+#### QUANTITATIVE PART
 * `quant_weights`: A dictionary to adjust the weighting of each quantitative financial metric (e.g., `revenue_growth`, `eps_growth`). The weights should sum to 1.0.
-## QUALITATIVE PART
+#### QUALITATIVE PART
 * `quant_moat_params`     : Set a minimum gross margin and ROIC to be qualified as a company with a MOAT
 * `quant_moat_scores`     : Set scores assigned to company for breaching minimum gross margin and ROIC level
 * `moat_keywords`         : Define words indicating a strength of MOAT to be found in earnings call transcript
@@ -36,7 +36,7 @@ All user-specific inputs are managed in `params.py`. You can modify the followin
 * `qual_scorecard_weights`: A dictionary to adjust the weighting of each qualitative financial metric (MOAT from transcript, MOAT in quantitative data, management strength from transcript and sentiment). The weights should sum to 1.0.
 * `inv_websites`          : A dctionary mapping stock tickers to URLs with latest earning call transcript (currently based use Motley Fool as a source)
 
-## EXTERNAL RATING PART
+#### EXTERNAL RATING PART
 * `ticker_mapping`: A dictionary to map tickers to the company names used in the external PDF, ensuring the parser finds the correct ratings.
 * `pdf_path`: A path to folder storing pdf with external ratings of stocks
 
