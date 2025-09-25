@@ -37,7 +37,7 @@ tickers:
   - BATS.L
 
 # Set flags whether the data should be pulled online (True) or from local files (False)
-use_quant: true
+use_quant: false
 use_qual: false
 use_external: true
 
@@ -88,18 +88,12 @@ keyword_score_weight: 1
 sentiment_score_weight: 40
 
 # Qualitiative scoreard weights
-# !!! THINK ABOUT THE WEIGHTINGS
+# !!! THINK ABOUT THE WEIGHTS
 qual_scorecard_weights:
-    WEIGHT_MOAT_TEXT  : 0.3
-    WEIGHT_MOAT_QUANT : 0.4
-    WEIGHT_MANAGEMENT : 0.15
-    WEIGHT_SENTIMENT : 0.15   
-    
-# Weights for the qualitative score (ensure they sum to 1.0)
-qual_weights:
-  moat:       0.3
-  leadership: 0.3
-  sentiment:  0.4
+    MOAT_TEXT  : 0.3
+    MOAT_QUANT : 0.4
+    MANAGEMENT : 0.15
+    SENTIMENT  : 0.15   
 
 # Transcripts to pull for qualitative analysis
 transcript_urls:

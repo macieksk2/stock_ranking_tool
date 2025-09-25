@@ -150,6 +150,58 @@ def create_df_fmp(tickers):
         
     return income_dfs, balance_dfs, cash_flow_dfs
 
+def data_na_neg_remove(df, metrics_pos, metrics_neg, is_info = False):
+    """
+    Helper function to handle NAs and negative values
+    """
+    # Iterate thorugh dataset and preprocess
+    if not is_info:
+        for metric in df.columns:
+            if metric in df.columns and (metric in metrics_pos or metric in metrics_neg):
+                df = df.dropna(subset=[metric])
+            if metric in df.columns and metric in metrics_pos:
+                df.loc[df[metric] < 0, metric] = 0
+    else:
+        # info is not a DF, thus different approach
+        for metric in metrics_pos:
+            if metric in df.keys():
+                # 100 - penalize valuation metric in case of na or negative
+                df[metric] = df[metric] if df[metric] > 0 and df[metric] != np.nan else 100
+        for metric in metrics_neg:
+            if metric in df.keys():
+                df[metric] = df[metric] if df[metric] != np.nan else 100
+    
+    return df
+
+def data_preprocess(income_df, balance_df, cash_flow_df, info):
+    """
+    Currently based on YF dataset
+    """
+    # Find missing values:
+    # Revenue - remove if NA or neg
+    income_attr_pos = ['Total Revenue']
+    # EPS, FCF, Gross Profit, Net Income, EBIT - remove if NA
+    income_attr_pos_neg = ['Basic EPS', 'Free Cash Flow', 'Gross Profit', 'Net Income', 'EBIT']
+    # Total Assets, Total Debt, Curr Assets, Curr Liab, Inventory, Cash And Cash Equivalents, Total Liabilities Net Minority Interest - remove if NA or neg
+    balance_attr_pos = ['Total Assets', 'Total Debt', 'Current Assets', 'Current Liabilities', 'Inventory',
+                        'Cash And Cash Equivalents', 'Total Liabilities Net Minority Interest']
+    # Stock Equity, Working Capital, Retained Earnings - remove if NA
+    balance_attr_pos_neg = ['Stockholders Equity', 'Working Capital', 'Retained Earnings']
+    # info
+    # marketCap, priceToBook, priceToSalesTrailing12Months, beta - remove if NA or neg
+    info_pos = ['marketCap', 'priceToBook', 'priceToSalesTrailing12Months', 'beta']
+    # forwardPE, trailingPE, enterpriseToEbitda, enterpriseToRevenue - remove if NA
+    info_pos_neg = ['forwardPE', 'trailingPE', 'enterpriseToEbitda', 'enterpriseToRevenue']
+    
+    # Iterate thorugh dataset and preporcess (income, balance, cash flow, info)
+    post_income_df = data_na_neg_remove(income_df, income_attr_pos, income_attr_pos_neg)
+    post_balance_df = data_na_neg_remove(balance_df, balance_attr_pos, balance_attr_pos_neg)
+    post_cash_flow_df = data_na_neg_remove(cash_flow_df, income_attr_pos, income_attr_pos_neg)
+    post_info = data_na_neg_remove(info, info_pos, info_pos_neg, True)
+    
+    return post_income_df, post_balance_df, post_cash_flow_df, post_info
+
+
 def calc_pos_neg_metrics(df, metric, years = 3):
     """
     As of now based on three years due to YF constraint, to be changed in case other source is used
@@ -157,7 +209,7 @@ def calc_pos_neg_metrics(df, metric, years = 3):
     growth = 0
     if len(df) >= years:
         if df[metric].iloc[0] / df[metric].iloc[years] > 0:
-            growth = 100 * ((df[metric].iloc[0] / df[metric].iloc[years])**(1/years) - 1)
+            growth = ((df[metric].iloc[0] / df[metric].iloc[years])**(1/years) - 1)
         else:
             if df[metric].iloc[0] > df[metric].iloc[years]:
                 # 10% in case turns positive from negative
@@ -173,7 +225,7 @@ def calc_income_fcf_metrics(income_df, fcf_df, years = 3):
     revenue_growth, eps_growth, fcf_growth = 0, 0, 0
     
     if len(income_df) >= years:
-        revenue_growth = 100 * ((income_df['Total Revenue'].iloc[0] /income_df['Total Revenue'].iloc[years])**(1/years) - 1)
+        revenue_growth = ((income_df['Total Revenue'].iloc[0] /income_df['Total Revenue'].iloc[years])**(1/years) - 1)
         eps_growth = calc_pos_neg_metrics(income_df, 'Basic EPS')
     if len(fcf_df) >= years:
         fcf_growth = calc_pos_neg_metrics(fcf_df, 'Free Cash Flow')
@@ -189,10 +241,11 @@ def calc_margin_measures(income_df, years = 3):
         if 'Gross Profit' in income_df.columns:
             gross_margin = income_df['Gross Profit'] / income_df['Total Revenue']
         else:
+            # Mainly applied for banks
             gross_margin = income_df['Net Income'] / income_df['Total Revenue']
         net_margin       = income_df['Net Income'] / income_df['Total Revenue']
-        gross_margin_avg = 100 * gross_margin.iloc[:years].mean()
-        net_margin_avg   = 100 * net_margin.iloc[:years].mean()
+        gross_margin_avg = gross_margin.iloc[:years].mean()
+        net_margin_avg   = net_margin.iloc[:years].mean()
     
     return gross_margin_avg, net_margin_avg
 
@@ -204,7 +257,7 @@ def calc_balance_measures(balance_df):
     if len(balance_df) >= 1:
         total_debt   = balance_df.get('Total Debt', 0).iloc[0]
         total_equity = balance_df.get('Stockholders Equity', 0).iloc[0]
-        d_e_ratio    = 10 * total_debt / total_equity if total_equity != 0 else 0
+        d_e_ratio    = total_debt / total_equity if total_equity != 0 else 0
         
         if 'Current Assets' in balance_df.columns:
             current_ratio = balance_df.get('Current Assets', 0).iloc[0] / balance_df.get('Current Liabilities', 0).iloc[0]
@@ -218,8 +271,8 @@ def calc_balance_measures(balance_df):
             current_ratio = balance_df.get('Cash And Cash Equivalents', 0).iloc[0] / balance_df.get('Current Debt', 0).iloc[0]
             quick_ratio = current_ratio
         
-        current_ratio = 10 * current_ratio
-        quick_ratio   = 10 * quick_ratio
+        current_ratio = current_ratio
+        quick_ratio   = quick_ratio
     
     return -d_e_ratio, current_ratio, quick_ratio
 
@@ -230,8 +283,8 @@ def calc_altman_z(income_df, balance_df, market_cap):
     if 'Working Capital' in balance_df.columns:
         A = balance_df.get('Working Capital', 0).iloc[0] / balance_df.get('Total Assets', 0).iloc[0]
     else:
-        # in case of banks assume Capital Stock
-        A = balance_df.get('Capital Stock', 0).iloc[0] / balance_df.get('Total Assets', 0).iloc[0]
+        # in case of banks assume Working Capital = Cash - Current Debt
+        A = (balance_df.get('Cash And Cash Equivalents', 0).iloc[0] - balance_df.get('Current Debt', 0).iloc[0]) / balance_df.get('Total Assets', 0).iloc[0]
     B = balance_df.get('Retained Earnings', 0).iloc[0] / balance_df.get('Total Assets', 0).iloc[0]
     if 'EBIT' in income_df.columns:
         C = income_df.get('EBIT', 0).iloc[0] / balance_df.get('Total Assets', 0).iloc[0]
@@ -239,16 +292,103 @@ def calc_altman_z(income_df, balance_df, market_cap):
         # in case of banks assume Net Income
         C = income_df.get('Net Income', 0).iloc[0] / balance_df.get('Total Assets', 0).iloc[0]
     D = market_cap / balance_df.get('Total Liabilities Net Minority Interest', 0).iloc[0]
-    E = income_df.get('Total Revenue', 0).iloc[0]        / balance_df.get('Total Assets', 0).iloc[0]
+    E = income_df.get('Total Revenue', 0).iloc[0] / balance_df.get('Total Assets', 0).iloc[0]
     Z_score = 1.2 * A + 1.4 * B + 3.3 * C + 0.6 * D + 1.0 * E
     
     return Z_score
 
 def calc_no_y_pos_msr(df, metric):
-    return sum(df[metric] > 0) * 10
+    return sum(df[metric] > 0)
 
 def calc_shares_change(df, metric):
-    return 100 * (df[metric].dropna().iloc[0] / df[metric].dropna().iloc[-1] - 1)
+    return (df[metric].dropna().iloc[0] / df[metric].dropna().iloc[-1] - 1)
+
+def retrieve_info_data(info, do_quant):
+    """
+    Based on info structure in YF
+    Takes into account situations, when some attributes are not present
+    In case no option is available, assigns very low value penalizing the stock
+    """
+
+    if do_quant:
+        marketCap = info['marketCap']
+        pb_ratio = -info['priceToBook']
+        ps_ratio = -info['priceToSalesTrailing12Months']
+        if 'forwardPE' in info.keys():
+            pe_ratio = -info['forwardPE']
+        elif 'trailingPE' in info.keys():
+            pe_ratio = -info['trailingPE']
+        else:
+            pe_ratio = -100
+            
+        if 'enterpriseToEbitda' in info.keys():
+            ev_ebitda = -info['enterpriseToEbitda']
+        elif 'enterpriseToRevenue' in info.keys():
+            ev_ebitda = -info['enterpriseToRevenue']
+        else:
+            ev_ebitda = -100
+        # Extract beta --> negative since, in this case, it is interpreted as the higher the worst (prefer lower vol)
+        beta = -info['beta']
+    # different structure of input in case pulled from excel
+    else:
+        marketCap = info['marketCap'][0]
+        pb_ratio = -info['priceToBook'][0]
+        ps_ratio = -info['priceToSalesTrailing12Months'][0]
+        if 'forwardPE' in info.keys():
+            pe_ratio = -info['forwardPE'][0]
+        elif 'trailingPE' in info.keys():
+            pe_ratio = -info['trailingPE'][0]
+        else:
+            pe_ratio = -100
+            
+        if 'enterpriseToEbitda' in info.keys():
+            ev_ebitda = -info['enterpriseToEbitda'][0]
+        elif 'enterpriseToRevenue' in info.keys():
+            ev_ebitda = -info['enterpriseToRevenue'][0]
+        else:
+            ev_ebitda = -100
+        beta = -info['beta'][0]
+            
+    return marketCap, pb_ratio, ps_ratio, pe_ratio, ev_ebitda, beta
+
+def normalize_dataframe(df, min_max_cols, z_score_cols):
+    """
+    Normalizes specified columns in a pandas DataFrame using Min-Max and Z-score scaling.
+    
+    Args:
+        df (pd.DataFrame): The DataFrame to normalize.
+        min_max_cols (list): A list of column names to normalize using Min-Max scaling.
+                             Best for metrics with only positive values (e.g., margins, ratios).
+        z_score_cols (list): A list of column names to normalize using Z-score normalization.
+                             Best for metrics with positive and negative values (e.g., growth rates).
+                             
+    Returns:
+        pd.DataFrame: A new DataFrame with the specified columns normalized.
+    """
+    df_normalized = df.copy()
+    
+    # Min-Max Scaling
+    for col in min_max_cols:
+        if col in df_normalized.columns:
+            # Handle the case where max and min are the same to avoid division by zero
+            if df_normalized[col].max() == df_normalized[col].min():
+                df_normalized[col] = 0
+            else:
+                df_normalized[col] = (df_normalized[col] - df_normalized[col].min()) / \
+                                      (df_normalized[col].max() - df_normalized[col].min())
+    
+    # Z-Score Normalization
+    for col in z_score_cols:
+        if col in df_normalized.columns:
+            mean = df_normalized[col].mean()
+            std_dev = df_normalized[col].std()
+            # Handle the case where standard deviation is zero to avoid division by zero
+            if std_dev == 0:
+                df_normalized[col] = 0
+            else:
+                df_normalized[col] = (df_normalized[col] - mean) / std_dev
+                
+    return df_normalized
 ################################################# QUAL ###########################################################
 class CompanyAnalyzer:
     def __init__(self, companies, income_df, balance_df, cash_flow_df, 
@@ -434,10 +574,10 @@ class CompanyAnalyzer:
         You can customize the weighting of each factor here.
         """
         # Define weights for each factor
-        WEIGHT_MOAT_TEXT  = self.qual_scorecard_weights['WEIGHT_MOAT_TEXT']
-        WEIGHT_MOAT_QUANT = self.qual_scorecard_weights['WEIGHT_MOAT_QUANT']
-        WEIGHT_MANAGEMENT = self.qual_scorecard_weights['WEIGHT_MANAGEMENT']
-        WEIGHT_SENTIMENT = self.qual_scorecard_weights['WEIGHT_SENTIMENT']
+        WEIGHT_MOAT_TEXT  = self.qual_scorecard_weights['MOAT_TEXT']
+        WEIGHT_MOAT_QUANT = self.qual_scorecard_weights['MOAT_QUANT']
+        WEIGHT_MANAGEMENT = self.qual_scorecard_weights['MANAGEMENT']
+        WEIGHT_SENTIMENT = self.qual_scorecard_weights['SENTIMENT']
         
         total_score = (moat_text  * WEIGHT_MOAT_TEXT  + 
                        moat_quant * WEIGHT_MOAT_QUANT + 
