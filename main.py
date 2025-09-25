@@ -16,7 +16,6 @@ from nltk.sentiment import SentimentIntensityAnalyzer
 
 # import relevant functions
 from utils.utils import *
-from utils.utils_parse_Cymcyk import *
 # import input parameters
 # Load input parameters from YAML file
 with open('input/params.yaml', 'r') as f:
@@ -131,7 +130,7 @@ if __name__ == '__main__':
                                      'Management Score' :  qual_score['Management_Score'][0],
                                      'Sentiment Score'  :  qual_score['Sentiment_Score'][0]}
             
-    ############## QUALITATIVE PART FROM CYMCYK ###################################################################
+    ############## QUALITATIVE PART FROM EXTERNAL RATING ##########################################################
     print('*************************************************')
     print('EXTERNAL RATING PART')
     print('*************************************************')
@@ -151,7 +150,7 @@ if __name__ == '__main__':
     metrics_df['Quant Score'] = 0  
     for metric, weight in config['quant_weights'].items():
         metrics_df['Quant Score'] += metrics_df[metric] * weight
-        
+    
     # Rank each quantitative column. For ratios like D/E, a lower value is better, so ascending=True
     ranked_metrics = metrics_df.copy()
     for metric in config['quant_weights'].keys():
@@ -159,7 +158,16 @@ if __name__ == '__main__':
     ranked_metrics['Quant Score'] = metrics_df['Quant Score']    
     ranked_metrics['Quant Score_rank'] = metrics_df['Quant Score'].rank(ascending=False)
     # Combine all scores into a final DataFrame
-    final_df                      = ranked_metrics.copy()
+    final_df = ranked_metrics.copy()
+    
+    # Calculate contributions for each metric (per stock)
+    for ticker in tickers:
+        for metric, weight in config['quant_weights'].items():
+            final_df.loc[ticker, f'{metric}_contrib'] = metrics_df.loc[ticker, metric] * weight
+        plot_waterfall(ticker, final_df, config['quant_weights'])
+    # Create a pdf report with plots
+    create_pdf_report("output\\figures", "output\\Stock_Quant_attribution.pdf", imgs = tickers, title = "Stock_Quant_attribution.pdf")
+    
     final_df['MOAT_TEXT']   = pd.Series({t: master_scores[t]['MOAT Text Score'] for t in tickers})
     final_df['MOAT_QUANT']  = pd.Series({t: master_scores[t]['MOAT Quant Score'] for t in tickers})
     final_df['MANAGEMENT']  = pd.Series({t: master_scores[t]['Management Score'] for t in tickers})
@@ -195,6 +203,6 @@ if __name__ == '__main__':
     for metric in final_df.columns:
         plot_ranks(final_df, metric)
     # Create a pdf report with plots
-    create_pdf_report("output\\figures", "output\\Stock_Performance_Report.pdf")
+    create_pdf_report("output\\figures", "output\\Stock_Performance_Report.pdf", imgs = [])
 
     

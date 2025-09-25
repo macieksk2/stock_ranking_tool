@@ -21,6 +21,9 @@ from nltk.sentiment import SentimentIntensityAnalyzer
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from nltk.stem import WordNetLemmatizer
+
+import pdfplumber
+
 ################################################# QUANT ###########################################################
 def get_financials_yf(ticker, statement_type):
     """
@@ -585,6 +588,39 @@ class CompanyAnalyzer:
                        sentiment  * WEIGHT_SENTIMENT)
         
         return total_score
+    
+def plot_waterfall(ticker, df, quant_weights):
+    """
+    Waterfall of metrics contributing to quant score
+    """
+    # Collect contributions
+    contribs = {m: df.loc[ticker, f"{m}_contrib"] for m in quant_weights.keys()}
+    # Sort descending
+    contribs = dict(sorted(contribs.items(), key=lambda x: x[1], reverse=True))
+
+    labels = list(contribs.keys())
+    values = list(contribs.values())
+    total = sum(values)
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+
+    # Horizontal bars
+    ax.barh(labels, values, color="skyblue")
+    ax.axvline(total, color="red", linestyle="--", label=f"Total Quant Score: {total:.2f}")
+
+    # Labels
+    ax.set_xlabel("Contribution")
+    ax.set_ylabel("Metric")
+    ax.set_title(f"Feature Contributions for {ticker}")
+    ax.legend()
+
+    # Invert y-axis so largest contribution appears at top
+    ax.invert_yaxis()
+
+    plt.tight_layout()
+    plt.savefig(f"output/figures/{ticker}_waterfall.png")
+    plt.close()
+
 
 def plot_ranks(df, metric):
     """
@@ -612,7 +648,7 @@ def plot_ranks(df, metric):
     plt.savefig(str("output\\figures" + "\\" + "_bar_chart_" + metric + ".png"))
     plt.show()
 
-def create_pdf_report(image_folder, output_pdf):
+def create_pdf_report(image_folder, output_pdf, imgs = [], title = "Stock Performance Report"):
     """
     Combines PNG plots into a PDF with automatic descriptions.
     """
@@ -629,23 +665,29 @@ def create_pdf_report(image_folder, output_pdf):
     body_style.wordWrap = 'CJK'
     
     # Add a title page
-    Story.append(Paragraph("Stock Performance Report", title_style))
+    Story.append(Paragraph(title, title_style))
     Story.append(Spacer(1, 0.5*inch))
     
     # Get a list of all PNG files in the folder and sort them
-    image_files = ["_bar_chart_Final Rank.png", 
-                   "_bar_chart_Quant Rank.png", "_bar_chart_revenue_growth_rank.png", "_bar_chart_eps_growth_rank.png",
-                   "_bar_chart_gross_margin_avg_rank.png", "_bar_chart_net_margin_avg_rank.png", 
-                   "_bar_chart_fcf_growth_rank.png", "_bar_chart_d_e_ratio_rank.png", 
-                   "_bar_chart_curr_ratio_rank.png", "_bar_chart_quick_ratio_rank.png",
-                   "_bar_chart_z_score_rank.png", "_bar_chart_no_y_pos_eps_rank.png", 
-                   "_bar_chart_no_y_pos_fcf_rank.png", "_bar_chart_shares_chg_rank.png",
-                   "_bar_chart_pe_ratio_rank.png", "_bar_chart_ps_ratio_rank.png",
-                   "_bar_chart_pb_ratio_rank.png", "_bar_chart_ev_ebitda_rank.png", 
-                   "_bar_chart_beta_rank.png", "_bar_chart_scaled_vol_rank.png",
-                   "_bar_chart_accrual_rat_rank.png", "_bar_chart_cash_conv_rat_rank.png",
-                   "_bar_chart_Qual Rank.png", "_bar_chart_MOAT Quant Score.png", "_bar_chart_MOAT Text Score.png", "_bar_chart_Management Score.png", "_bar_chart_Sentiment Score.png",
-                   "_bar_chart_External Rating Score.png"]
+    if imgs == []:
+        image_files = ["_bar_chart_Final Rank.png", 
+                       "_bar_chart_Quant Rank.png", "_bar_chart_revenue_growth_rank.png", "_bar_chart_eps_growth_rank.png",
+                       "_bar_chart_gross_margin_avg_rank.png", "_bar_chart_net_margin_avg_rank.png", 
+                       "_bar_chart_fcf_growth_rank.png", "_bar_chart_d_e_ratio_rank.png", 
+                       "_bar_chart_curr_ratio_rank.png", "_bar_chart_quick_ratio_rank.png",
+                       "_bar_chart_z_score_rank.png", "_bar_chart_no_y_pos_eps_rank.png", 
+                       "_bar_chart_no_y_pos_fcf_rank.png", "_bar_chart_shares_chg_rank.png",
+                       "_bar_chart_pe_ratio_rank.png", "_bar_chart_ps_ratio_rank.png",
+                       "_bar_chart_pb_ratio_rank.png", "_bar_chart_ev_ebitda_rank.png", 
+                       "_bar_chart_beta_rank.png", "_bar_chart_scaled_vol_rank.png",
+                       "_bar_chart_accrual_rat_rank.png", "_bar_chart_cash_conv_rat_rank.png",
+                       "_bar_chart_Qual Rank.png", "_bar_chart_MOAT Quant Score.png", "_bar_chart_MOAT Text Score.png", "_bar_chart_Management Score.png", "_bar_chart_Sentiment Score.png",
+                       "_bar_chart_External Rating Score.png"]
+    else:
+        image_files = []
+        for ticker in imgs:
+            image_files.append(str(ticker + "_waterfall.png"))
+            
 
     for img_file in image_files:
         img_path = os.path.join(image_folder, img_file)
@@ -671,3 +713,58 @@ def create_pdf_report(image_folder, output_pdf):
     # Build the PDF document
     doc.build(Story)
     print(f"PDF report '{output_pdf}' created successfully!")
+
+def get_analyst_rankings_from_pdf(pdf_path, tickers, ticker_mapping):
+    """
+    Parses a PDF file to extract analyst rankings for a list of tickers.
+    
+    Args:
+        pdf_path (str): The file path to the PDF document.
+        tickers (list): A list of stock tickers to search for.
+        
+    Returns:
+        pd.DataFrame: A DataFrame with tickers and their analyst ratings.
+    """
+    analyst_ratings = {}
+    
+    with pdfplumber.open(pdf_path) as pdf:
+        # reverse pages since the summary slide is closer to the end of the deck
+        for page in reversed(pdf.pages):
+            print(page)
+            text = page.extract_text()
+            # Find relvenat headers in the summary slide
+            match = text.find('Podsumowanie')
+            match2 = text.find('ZAGRANICA')
+            if match >= 0 and match2 >= 0:
+                # search through each ticker to pull the rating
+                # if not available, assign lowest (-2)
+                for ticker in tickers:
+                    print(ticker)
+                    # Map the ticker with mapping; if not found, used the actual ticker
+                    try:
+                        map_ticker = ticker_mapping[ticker]
+                    except:
+                        map_ticker = ticker
+                    start_index = text.find(map_ticker) - 2
+                    # account for negative ratings
+                    if text[start_index - 1] == "-":
+                        start_index -= 1
+                    end_index   = text.find(map_ticker) - 1
+                    if start_index > 0:
+                        rating = text[start_index:end_index]
+                    else:
+                        # default for not found is the worst rating, i.e. -2
+                        rating = -2
+                    analyst_ratings[ticker] = rating
+                    print(rating)
+                break
+    
+    # Create a DataFrame from the extracted ratings
+    analyst_df = pd.DataFrame.from_dict(analyst_ratings, orient='index')
+    analyst_df.index.name = 'Ticker'
+    
+    # Fill any missing tickers with the lowest ranking, as requested
+    analyst_df = analyst_df.reindex(tickers)
+    analyst_df.fillna(-2, inplace=True)
+    
+    return analyst_df

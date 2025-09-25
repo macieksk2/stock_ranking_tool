@@ -37,8 +37,8 @@ tickers:
   - BATS.L
 
 # Set flags whether the data should be pulled online (True) or from local files (False)
-use_quant: false
-use_qual: false
+use_quant: true
+use_qual: true
 use_external: true
 
 ############################################################ QUANTITATIVE ############################################
@@ -47,20 +47,20 @@ quant_weights:
   revenue_growth:   0.13
   eps_growth:       0.13
   fcf_growth:       0.05
-  net_margin_avg:   0.07
-  gross_margin_avg: 0.075
-  d_e_ratio:        0.075
-  curr_ratio:       0.075
-  quick_ratio:      0.05
-  z_score:          0.085
-  no_y_pos_eps:     0.05
-  no_y_pos_fcf:     0.05
-  shares_chg:       0.05
-  pe_ratio:         0.01
-  ps_ratio:         0.01
-  pb_ratio:         0.01
-  ev_ebitda:        0.01
-  beta:             0.01
+  net_margin_avg:   0.13
+  gross_margin_avg: 0.13
+  d_e_ratio:        0.05
+  curr_ratio:       0.03
+  quick_ratio:      0.03
+  z_score:          0.10
+  no_y_pos_eps:     0.02
+  no_y_pos_fcf:     0.02
+  shares_chg:       0.02
+  pe_ratio:         0.02
+  ps_ratio:         0.02
+  pb_ratio:         0.02
+  ev_ebitda:        0.02
+  beta:             0.02
   scaled_vol:       0.02
   accrual_rat:      0.02
   cash_conv_rat:    0.02
