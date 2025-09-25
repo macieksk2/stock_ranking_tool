@@ -11,17 +11,17 @@ Finally, the rank of each stock is determined, which further enters Final rank e
 The metrics, which are taken into account:
 - revenue growth, eps growth, fcf growth - average across available period in percentage points. In case the metrics turns positive from negative, it is awarded with 10%, otherwise -10%
 - gross / net margin - average across available period in percentage points
-- D / E, current ratio, quick ratio - balance sheet measures multiplied by 10. D / E enters with negative sign given its reverse impact on the company
+- D / E, current ratio, quick ratio - balance sheet measures; D / E enters with negative sign given its reverse impact on the company
 - Altman Z score
-- number of years with positive EPS / FCF - both enter the score multiplied by 10
-- % change in shares outstanding - multiplied by 100 (in percentage points), enters with negative sign given its reverse impact on the stock price
+- number of years with positive EPS / FCF - both enter the score
+- % change in shares outstanding - in percentage points, enters with negative sign given its reverse impact on the stock price
 - valuation metrics (P/E, P/B, P/S, EV/EBITDA)
-- volatiltiy metrics (beta, EPS st deviation to mean ratio)
-- accruals Ratio (earnings vs. cash flow)
+- volatility metrics (beta, EPS st deviation to mean ratio)
+- accruals ratio (earnings vs. cash flow)
 - cash conversion ratio (CFO / Net Income)
 
 #### 2. Qualitative Analysis
-The qualitative analysis focuses on non-numerical factors that can provide a competitive advantage, often referred to as a "moat." This part of the model performs sentiment analysis on earnings call transcripts. A qualitative score is created by combining scores from sentiment, moat, and leadership factors. The qualitative rank is then calculated based on this combined score.
+The qualitative analysis focuses on non-numerical factors that can provide a competitive advantage, often referred to as a "moat". This part of the model performs sentiment analysis on earnings call transcripts. A qualitative score is created by combining scores from sentiment, moat, and leadership factors. The qualitative rank is then calculated based on this combined score.
 
 The metrics, which are taken into account:
 - MOAT Quant score - points awarded for sufficiently high gross margin and ROIC;
@@ -29,8 +29,10 @@ The metrics, which are taken into account:
 - Leadership Text Score - points awarded for matching the previously defined words defining strong management within earning call transcript;
 - Sentiment Score - additional points awarded for a difference between positive and negative sentyment within earnings call transcript measure by nltk packages Sentiment Analyzer;
 
+In the last step, similarly to Quantitative piece, the ranks are calculated to determine the order of stocks in qualitative terms.
+
 #### 3. External Ratings
-The framework integrates external expertise by parsing a provided PDF document. The `utils_parse_Cymcyk.py` script is specifically designed to extract analyst ratings from the PDF file. These ratings are then assigned to their respective tickers and used to generate a separate "External Rating Score." If a ticker is not found in the PDF, it is assigned the lowest possible rating (-2).
+The framework integrates external expertise by parsing a provided PDF document. The `utils.py` script includes the function that is specifically designed to extract analyst ratings from the PDF file. These ratings are then assigned to their respective tickers and used to generate a separate "External Rating Score". If a ticker is not found in the PDF, it is assigned the lowest possible rating (-2).
 
 #### Final Ranking
 The final rank for each stock is an average of the ranks from the three components: Quantitative Rank, Qualitative Rank, and External Rating Rank. If external ratings are not used, the final rank is an average of only the Quantitative and Qualitative ranks. This approach provides a holistic, multi-faceted perspective for stock selection.

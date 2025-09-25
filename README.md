@@ -56,12 +56,12 @@ input
 ├── params.yaml                # User input and configuration
 ├── StockScan_grudzien_2024_fin-laqvwb.pdf # Input file with external ratings
 utils
-├── utils.py                   # Helper functions for quantitative and qualitative analysis
-├── utils_parse_Cymcyk.py      # Script to parse external ratings from the PDF
+├── utils.py                   # Helper functions for quantitative, qualitative analysis or parsing external rating
 output
 ├── figures                    # Folder storing intermediate output in the form of plots (quant part, qual part, external rating)
 ├── stock_qual_scores          # Folder storing intermediate output of qualitative analysis
 ├── stock_quant_scores         # Folder storing intermediate output of quantitative analysis
 ├── stock_analysis_scores.csv  # Final output including a dataframe with stocks and their scores and ranks per category
 ├── Stock_Performance_Report.pdf  # Pdf report including the most relevant plots from folder figures
+├── Stock_Quant_attribution.pdf   # Pdf report including the watterfal plots with attribution of metrics contributing to final Quant score per stock
 
