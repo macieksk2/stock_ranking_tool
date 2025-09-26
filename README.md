@@ -45,7 +45,7 @@ To run the analysis, execute the `main.py` script from your terminal:
 ```bash
 python main.py
 
-The script will perform the analysis based on the settings in params.py and print the final ranked summary of the selected stocks to the console and store it in csv in output folder. 
+The script will perform the analysis based on the settings in params.yaml and print the final ranked summary of the selected stocks to the console and store it in csv in output folder. 
 It will also generate output files in the output/ directory.
 
 Project Structure
