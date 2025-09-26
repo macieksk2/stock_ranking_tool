@@ -14,6 +14,11 @@ import yfinance as yf
 from bs4 import BeautifulSoup
 from nltk.sentiment import SentimentIntensityAnalyzer
 
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
 # import relevant functions
 from utils.utils import *
 # import input parameters
@@ -30,9 +35,9 @@ metrics_data = {ticker: {} for ticker in tickers}
 
 if __name__ == '__main__':
     ############################################### QUANTITATIVE PART #######################################
-    print('*************************************************')
-    print('QUANTITATIVE PART')
-    print('*************************************************')
+    logging.info('*************************************************') 
+    logging.info('QUANTITATIVE PART')                           
+    logging.info('*************************************************') 
     if config['use_quant']:
         income_df, balance_df, cash_flow_df, info = create_df_yf(tickers)
         for ticker in tickers:
@@ -53,9 +58,9 @@ if __name__ == '__main__':
             info[ticker]         = pd.read_excel(str("output\stock_quant_scores" + "\\" + ticker + "_info.xlsx"))
     
     for ticker in tickers:
-        print('*************************************************')
-        print(ticker)
-        print('*************************************************')
+        logging.info('*************************************************') 
+        logging.info(ticker)                                         
+        logging.info('*************************************************')
         # --- Quantitative Metric Calculation ---
         # Growth measures
         revenue_growth, eps_growth, fcf_growth = calc_income_fcf_metrics(income_df[ticker], cash_flow_df[ticker], years = 3)
@@ -102,9 +107,9 @@ if __name__ == '__main__':
             'cash_conv_rat'   : cash_conv_rat
         }
     ################################################# QUALITATIVE PART #######################################
-    print('*************************************************')
-    print('QUALITATIVE PART')
-    print('*************************************************')
+    logging.info('*************************************************')
+    logging.info('QUALITATIVE PART')                               
+    logging.info('*************************************************') 
     # If False, it should read the score results from csv
     if config['use_qual']:
         for ticker in tickers:
@@ -131,9 +136,9 @@ if __name__ == '__main__':
                                      'Sentiment Score'  :  qual_score['Sentiment_Score'][0]}
             
     ############## QUALITATIVE PART FROM EXTERNAL RATING ##########################################################
-    print('*************************************************')
-    print('EXTERNAL RATING PART')
-    print('*************************************************')
+    logging.info('*************************************************') 
+    logging.info('EXTERNAL RATING PART')                          
+    logging.info('*************************************************') 
     if config['use_external']:
         external_ratings = get_analyst_rankings_from_pdf(config['pdf_path'], tickers, config['ticker_mapping'])
         for ticker in tickers:
@@ -194,9 +199,9 @@ if __name__ == '__main__':
         final_df['External Rating Rank']  = final_df['External Rating Score'].rank(ascending=False)
         final_df['Final Rank'] = (final_df['Quant Rank'] + final_df['Qual Rank'] + final_df['External Rating Rank']) / 3
     if not config['use_external']:
-        print(final_df[['Quant Score', 'Qual Score', 'Quant Rank', 'Qual Rank', 'Final Rank']])
+        logging.info(final_df[['Quant Score', 'Qual Score', 'Quant Rank', 'Qual Rank', 'Final Rank']]) 
     else:
-        print(final_df[['Quant Score', 'Qual Score', 'Quant Rank', 'Qual Rank', 'External Rating Rank', 'Final Rank']])
+        logging.info(final_df[['Quant Score', 'Qual Score', 'Quant Rank', 'Qual Rank', 'External Rating Rank', 'Final Rank']])
     final_df.to_excel("output\stock_analysis_scores.xlsx")
     
     ############## PLOTTING ########################################################################################

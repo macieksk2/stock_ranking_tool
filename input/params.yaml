@@ -37,8 +37,8 @@ tickers:
   - BATS.L
 
 # Set flags whether the data should be pulled online (True) or from local files (False)
-use_quant: true
-use_qual: true
+use_quant: false
+use_qual: false
 use_external: true
 
 ############################################################ QUANTITATIVE ############################################

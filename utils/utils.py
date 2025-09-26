@@ -24,6 +24,8 @@ from nltk.stem import WordNetLemmatizer
 
 import pdfplumber
 
+import logging
+
 ################################################# QUANT ###########################################################
 def get_financials_yf(ticker, statement_type):
     """
@@ -34,7 +36,7 @@ def get_financials_yf(ticker, statement_type):
     try:
         stock = yf.Ticker(ticker)
     except Exception as e:
-        print(f"Error creating Ticker object for {ticker}: {e}")
+        logging.error(f"Error creating Ticker object for {ticker}: {e}")
         return None
 
     # Get the financial statement based on the specified type
@@ -47,12 +49,12 @@ def get_financials_yf(ticker, statement_type):
     elif statement_type == 'info':
         data = stock.info
     else:
-        print(f"Invalid statement_type: {statement_type}")
+        logging.warning(f"Invalid statement_type: {statement_type}")
         return None
     
     if statement_type != "info":
         if data.empty:
-            print(f"No data found for {ticker} for {statement_type}.")
+            logging.warning(f"No data found for {ticker} for {statement_type}.") 
             return None
 
     # The yfinance library already returns a clean DataFrame, so less manipulation is needed
@@ -88,7 +90,7 @@ def create_df_yf(tickers):
             info[ticker] = info_dict
 
         except Exception as e:
-            print(f"Could not process data for {ticker}. Error: {e}")
+            logging.error(f"Could not process data for {ticker}. Error: {e}")
 
     return income_dfs, balance_dfs, cash_flow_dfs, info
 # for FMP only
@@ -107,12 +109,12 @@ def get_financials_fmp(ticker, statement_type):
     response = requests.get(url, timeout = 20, headers = headers)
 
     if response.status_code != 200:
-        print(f"Error fetching data for {ticker}. Status code: {response.status_code}")
+        logging.error(f"Error fetching data for {ticker}. Status code: {response.status_code}")
         return None
 
     data = response.json()
     if not data:
-        print(f"No data found for {ticker} for {statement_type}.")
+        logging.warning(f"No data found for {ticker} for {statement_type}.")
         return None
 
     df       = pd.DataFrame(data).set_index('date').transpose()
@@ -149,7 +151,7 @@ def create_df_fmp(tickers):
             balance_dfs[ticker]   = balance_df
             cash_flow_dfs[ticker] = cash_flow_df
         except Exception as e:
-            print(f"Could not process data for {ticker}. Error: {e}")
+            logging.error(f"Could not process data for {ticker}. Error: {e}")
         
     return income_dfs, balance_dfs, cash_flow_dfs
 
@@ -440,7 +442,7 @@ class CompanyAnalyzer:
             text     = ' '.join(t.get_text() for t in soup.find_all(['p', 'h1', 'h2', 'h3']))
             return text
         except requests.exceptions.RequestException as e:
-            print(f"Error scraping {url}: {e}")
+            logging.error(f"Error scraping {url}: {e}")
             return ""
 
     def analyze_moat_from_text(self, text):
@@ -505,12 +507,12 @@ class CompanyAnalyzer:
             ticker  = company['ticker']
             website = company['website']
             
-            print(f"Analyzing {ticker}...")
+            logging.info(f"Analyzing {ticker}...")
             
             # Acquire data from company website
             full_text = self.scrape_website_text(website)
             if not full_text:
-                print(f"Skipping {ticker} due to scraping error.")
+                logging.warning(f"Skipping {ticker} due to scraping error.")
                 continue
 
             # Calculate MOAT strength (text-based part)
@@ -539,8 +541,8 @@ class CompanyAnalyzer:
         
         # Display results in a DataFrame
         df = pd.DataFrame(self.results)
-        print("\n--- Qualitative Scorecard Results ---")
-        print(df)
+        logging.info("\n--- Qualitative Scorecard Results ---")
+        logging.info(df) 
         
         # Store as csv
         df.to_csv(str("output\stock_qual_scores" + "\\" + ticker + "_qual_scores.csv"))
@@ -712,7 +714,7 @@ def create_pdf_report(image_folder, output_pdf, imgs = [], title = "Stock Perfor
         
     # Build the PDF document
     doc.build(Story)
-    print(f"PDF report '{output_pdf}' created successfully!")
+    logging.info(f"PDF report '{output_pdf}' created successfully!")
 
 def get_analyst_rankings_from_pdf(pdf_path, tickers, ticker_mapping):
     """
@@ -730,16 +732,17 @@ def get_analyst_rankings_from_pdf(pdf_path, tickers, ticker_mapping):
     with pdfplumber.open(pdf_path) as pdf:
         # reverse pages since the summary slide is closer to the end of the deck
         for page in reversed(pdf.pages):
-            print(page)
+            logging.debug(page)
             text = page.extract_text()
             # Find relvenat headers in the summary slide
+            # !!! Add the counterpart for polish stocks
             match = text.find('Podsumowanie')
             match2 = text.find('ZAGRANICA')
             if match >= 0 and match2 >= 0:
                 # search through each ticker to pull the rating
-                # if not available, assign lowest (-2)
+                # if not available, assign starting value (0)
                 for ticker in tickers:
-                    print(ticker)
+                    logging.debug(ticker)
                     # Map the ticker with mapping; if not found, used the actual ticker
                     try:
                         map_ticker = ticker_mapping[ticker]
@@ -753,18 +756,18 @@ def get_analyst_rankings_from_pdf(pdf_path, tickers, ticker_mapping):
                     if start_index > 0:
                         rating = text[start_index:end_index]
                     else:
-                        # default for not found is the worst rating, i.e. -2
-                        rating = -2
+                        # default for not found is the starting rating, i.e. 0
+                        rating = 0
                     analyst_ratings[ticker] = rating
-                    print(rating)
+                    logging.debug(rating)
                 break
     
     # Create a DataFrame from the extracted ratings
     analyst_df = pd.DataFrame.from_dict(analyst_ratings, orient='index')
     analyst_df.index.name = 'Ticker'
     
-    # Fill any missing tickers with the lowest ranking, as requested
+    # Fill any missing tickers with the starting ranking
     analyst_df = analyst_df.reindex(tickers)
-    analyst_df.fillna(-2, inplace=True)
+    analyst_df.fillna(0, inplace=True)
     
     return analyst_df
