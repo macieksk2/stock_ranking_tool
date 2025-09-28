@@ -9,32 +9,74 @@ API_KEY: "O7jpbikr5wCjo34KFLWi9nmU3xJ9laxh"
 
 # The tickers to analyze
 tickers:
-  - MSFT
-  - AAPL
-  - GOOGL
-  - AMZN
-  - TSLA
-  - NVDA
-  - META
-  - ASML
-  - AMD
-  - ARM
-  - JPM
-  - GS
-  - INTU
-  - TSMC34.SA
-  - RACE
-  - PLTR
-  - LLY
-  - VRTX
-  - KMI
-  - C
-  - INTC
-  - BABA
-  - RIO
-  - EQR
-  - LMT
-  - BATS.L
+   - MSFT
+   - AAPL
+   - GOOGL
+   - AMZN
+   - TSLA
+   - NVDA
+   - META
+   - ASML
+   - AMD
+   - ARM
+   - JPM
+   - GS
+   - INTU
+   - TSMC34.SA
+   - RACE
+   - PLTR
+   - LLY
+   - VRTX
+   - KMI
+   - C
+   - INTC
+   - BABA
+   - RIO
+   - EQR
+   - LMT
+   - BATS.L
+   - ADYEN.AS
+   - XYZ
+   - CRM
+   - SE
+   - ORCL
+   - ADBE
+   - V
+   - MA
+   - ANET
+   - AZO
+   - BKNG
+   - BN
+   - CCJ
+   - COIN
+   - CSU.TO
+   - DELL
+   - NVO
+   - HIMS
+   - INPST.AS
+   - MELI
+   - MU
+   - PYPL
+   - RHM.DE
+   - NOW
+   - SPOT
+   - UBER
+   - ULTA
+   - CMG
+   - CRWD
+   - OR.PA
+   - MCD
+   - SBUX
+   - NKE
+   - ODFL
+   - PANW
+   - ZAL.DE
+   - KER.PA
+   - MC.PA
+   - SAP
+   - AZN
+   - UNH
+   - BAC
 
 # Set flags whether the data should be pulled online (True) or from local files (False)
 use_quant: false
@@ -123,6 +165,49 @@ transcript_urls:
   RACE: "https://www.insidermonkey.com/blog/ferrari-n-v-nyserace-q4-2024-earnings-call-transcript-1443440/"
   PLTR: "https://www.fool.com/earnings/call-transcripts/2025/02/04/palantir-technologies-pltr-q4-2024-earnings-call-t/"
   LLY: "https://www.fool.com/earnings/call-transcripts/2025/02/06/eli-lilly-lly-q4-2024-earnings-call-transcript/"
+  CRM: "https://www.fool.com/earnings/call-transcripts/2025/02/26/salesforce-crm-q4-2025-earnings-call-transcript/"
+  ORCL: "https://www.fool.com/earnings/call-transcripts/2025/03/10/oracle-orcl-q3-2025-earnings-call-transcript/"
+  V: "https://www.fool.com/earnings/call-transcripts/2024/10/29/visa-v-q4-2024-earnings-call-transcript/"
+  MA: "https://www.fool.com/earnings/call-transcripts/2022/07/28/mastercard-ma-q2-2022-earnings-call-transcript/"
+  DELL: "https://www.fool.com/earnings/call-transcripts/2021/02/26/dell-technologies-inc-dell-q4-2021-earnings-call-t/"
+  NOW: "https://www.fool.com/earnings/call-transcripts/2022/01/27/service-now-now-q4-2021-earnings-call-transcript/"
+  UBER: "https://www.fool.com/earnings/call-transcripts/2025/02/05/uber-technologies-uber-q4-2024-earnings-call-trans/"
+  CRWD: "https://www.fool.com/earnings/call-transcripts/2021/06/03/crowdstrike-holdings-inc-crwd-q1-2022-earnings-cal/"
+  SAP: "https://www.fool.com/earnings/call-transcripts/2021/10/21/sap-se-sap-q3-2021-earnings-call-transcript/"
+  BKNG: "https://www.nasdaq.com/articles/booking-holdings-bkng-q4-2024-earnings-call-transcript"
+  CMG: "https://www.nasdaq.com/articles/chipotle-mexican-grill-cmg-q4-2024-earnings-call-transcript"
+  ADYEN.AS: "https://www.fool.com/earnings/call-transcripts/2020/02/27/adyen-nv-adyyf-q2-2019-earnings-call-transcript.aspx"
+  XYZ: "https://www.fool.com/earnings/call-transcripts/2025/02/21/block-xyz-q4-2024-earnings-call-transcript/"
+  SE: "https://www.fool.com/earnings/call-transcripts/2025/03/04/sea-limited-se-q4-2024-earnings-call-transcript/"
+  ADBE: "https://www.fool.com/earnings/call-transcripts/2025/06/13/adobe-adbe-q2-2025-earnings-call-transcript/"
+  ANET: "https://www.fool.com/earnings/call-transcripts/2025/02/18/arista-networks-anet-q4-2024-earnings-call-transcr/"
+  AZO: "https://www.stockinsights.ai/us/AZO/earnings-transcript/fy25-q2-df99"
+  BN: "https://www.insidermonkey.com/blog/brookfield-corporation-nysebn-q2-2024-earnings-call-transcript-1332472/"
+  CCJ: "https://www.cameco.com/invest/financial-information/quarterly-reports/2025/q2"
+  COIN: "https://www.fool.com/earnings/call-transcripts/2025/02/13/coinbase-global-coin-q4-2024-earnings-call-transcr/"
+  CSU.TO: "https://quartr.com/companies/constellation-software-inc_3613"
+  NVO: "https://www.fool.com/earnings/call-transcripts/2025/02/05/novo-nordisk-nvo-q4-2024-earnings-call-transcript/"
+  HIMS: "https://www.stockinsights.ai/us/HIMS/earnings-transcript/fy24-q4-0314"
+  INPST.AS: "https://inpost.co.uk/resources/inpost-group-q1-2025-results"
+  MELI: "https://www.fool.com/earnings/call-transcripts/2025/02/20/mercadolibre-meli-q4-2024-earnings-call-transcript/"
+  MU: "https://www.fool.com/earnings/call-transcripts/2025/06/25/micron-mu-q3-2025-earnings-call-transcript/"
+  PYPL: "https://www.fool.com/earnings/call-transcripts/2025/08/06/paypal-pypl-q2-2025-earnings-call-transcript/"
+  RHM.DE: "https://www.rheinmetall.com/en/media/news-watch/news/2025/08/2025-08-07-rheinmetall-news-half-yearly-financial-report-h1"
+  SPOT: "https://www.fool.com/earnings/call-transcripts/2025/08/04/spotify-spot-q2-2025-earnings-call-transcript/"
+  UBER: "https://www.fool.com/earnings/call-transcripts/2025/02/05/uber-technologies-uber-q4-2024-earnings-call-trans/"
+  ULTA: "https://www.fool.com/earnings/call-transcripts/2025/03/14/ulta-beauty-ulta-q4-2024-earnings-call-transcript/"
+  OR.PA: "https://www.loreal-finance.com/eng/press-release/2025-half-year-results"
+  MCD: "https://www.fool.com/earnings/call-transcripts/2025/02/10/mcdonalds-mcd-q4-2024-earnings-call-transcript/"
+  SBUX: "https://www.fool.com/earnings/call-transcripts/2025/08/05/starbucks-sbux-q3-2025-earnings-call-transcript/"
+  NKE: "https://www.fool.com/earnings/call-transcripts/2025/03/20/nike-nke-q3-2025-earnings-call-transcript/"
+  ODFL: "https://www.fool.com/earnings/call-transcripts/2025/07/30/old-dominion-odfl-q2-2025-earnings-transcript/"
+  PANW: "https://www.fool.com/earnings/call-transcripts/2025/02/13/palo-alto-networks-panw-q2-2025-earnings-call-tran/"
+  ZAL.DE: "https://www.fool.com/earnings/call-transcripts/2020/05/10/zalando-se-zlndy-q1-2020-earnings-call-transcript.aspx"
+  KER.PA: "https://finance.yahoo.com/news/kering-sa-ppruf-h1-2025-071449242.html"
+  MC.PA: "https://www.insidermonkey.com/blog/lvmh-moet-hennessy-louis-vuitton-societe-europeenne-pnklvmuy-q2-2024-earnings-call-transcript-1326880/"
+  AZN: "https://www.fool.com/earnings/call-transcripts/2025/02/06/astrazeneca-plc-azn-q4-2024-earnings-call-transcri/"
+  UNH: "https://www.fool.com/earnings/call-transcripts/2025/08/06/unitedhealth-unh-q2-2025-earnings-transcript/"
+  BAC: "https://www.fool.com/earnings/call-transcripts/2025/07/16/bofa-bac-q2-2025-earnings-call-transcript/"
 
 ############################################################ EXTERNAL ############################################
 # Input to parse pdf from Cymcyk analysis (map tickers to actual names used)
@@ -153,6 +238,48 @@ ticker_mapping:
   ARM: ARM
   JPM: Jp Morgan Chase
   BATS.L: British American Tobacco
+  ADYEN.AS: Adyen
+  XYZ: Block
+  CRM: Salesforce
+  SE: Sea Limited
+  ORCL: Oracle
+  ADBE: Adobe
+  V: Visa
+  MA: Mastercard
+  ANET: Arista Networks
+  AZO: AutoZone
+  BKNG: Booking
+  BN: Brookfield Corporation
+  CCJ: Cameco Corp
+  COIN: Coinbase
+  CSU.TO: Constellation Software
+  DELL: Dell
+  NVO: Novo Nordisk
+  HIMS: Hims & Hers
+  INPST.AS: Inpost
+  MELI: Mercadolibre
+  MU: Micron Technology
+  PYPL: PayPal
+  RHM.DE: Rheinmetall
+  NOW: ServiceNow
+  SPOT: Spotify
+  UBER: Uber
+  ULTA: Ulta Beauty
+  CMG: ChipotleMexican Grill
+  CRWD: Crowdstrike
+  OR.PA: L'oreal
+  MCD: McDonalds
+  SBUX: Starbucks
+  NKE: Nike
+  ODFL: Old Dominion Freight Line
+  PANW: Palo Alto
+  ZAL.DE: Zalando
+  KER.PA: Kering
+  MC.PA: LVMH
+  SAP: SAP
+  AZN: Astra Zeneca
+  UNH: United Healthcare
+  BAC: Bank of America
   
 pdf_path:
   'input\StockScan_grudzien_2024_fin-laqvwb.pdf'

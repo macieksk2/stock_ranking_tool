@@ -38,7 +38,9 @@ if __name__ == '__main__':
     logging.info('*************************************************') 
     logging.info('QUANTITATIVE PART')                           
     logging.info('*************************************************') 
+    # --- Quantitative Data import and Preprocessing ---
     if config['use_quant']:
+        # Import data from YF
         income_df, balance_df, cash_flow_df, info = create_df_yf(tickers)
         for ticker in tickers:
             # Preprocessing module
@@ -49,6 +51,7 @@ if __name__ == '__main__':
             cash_flow_df[ticker].to_excel(str("output\stock_quant_scores" + "\\" + ticker + "_cash_flow_df.xlsx"))
             pd.DataFrame([info[ticker]]).to_excel(str("output\stock_quant_scores" + "\\" + ticker + "_info.xlsx"))
     # False - feed file by file from excels
+    # !!! Think about moving from excels to Postgre database
     else:
         income_df, balance_df, cash_flow_df, info = dict(), dict(), dict(), dict()
         for ticker in tickers:
@@ -57,11 +60,11 @@ if __name__ == '__main__':
             cash_flow_df[ticker] = pd.read_excel(str("output\stock_quant_scores" + "\\" + ticker + "_cash_flow_df.xlsx"))
             info[ticker]         = pd.read_excel(str("output\stock_quant_scores" + "\\" + ticker + "_info.xlsx"))
     
+    # --- Quantitative Metric Calculation ---
     for ticker in tickers:
         logging.info('*************************************************') 
         logging.info(ticker)                                         
         logging.info('*************************************************')
-        # --- Quantitative Metric Calculation ---
         # Growth measures
         revenue_growth, eps_growth, fcf_growth = calc_income_fcf_metrics(income_df[ticker], cash_flow_df[ticker], years = 3)
         # Margin measures
@@ -206,7 +209,8 @@ if __name__ == '__main__':
     
     ############## PLOTTING ########################################################################################
     for metric in final_df.columns:
-        plot_ranks(final_df, metric)
+        if any(item in metric for item in ['_rank', 'Rank', 'MOAT_TEXT', 'MOAT_QUANT', 'MANAGEMENT', 'SENTIMENT', 'External Rating Score']):
+            plot_ranks(final_df, metric)
     # Create a pdf report with plots
     create_pdf_report("output\\figures", "output\\Stock_Performance_Report.pdf", imgs = [])
 

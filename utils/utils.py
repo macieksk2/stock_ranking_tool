@@ -163,7 +163,9 @@ def data_na_neg_remove(df, metrics_pos, metrics_neg, is_info = False):
     if not is_info:
         for metric in df.columns:
             if metric in df.columns and (metric in metrics_pos or metric in metrics_neg):
-                df = df.dropna(subset=[metric])
+                # df = df.fillna(method='bfill').fillna(method='ffill')
+                df[metric] = df[metric].ffill()
+                df[metric] = df[metric].bfill()
             if metric in df.columns and metric in metrics_pos:
                 df.loc[df[metric] < 0, metric] = 0
     else:
@@ -287,10 +289,15 @@ def calc_altman_z(income_df, balance_df, market_cap):
     """
     if 'Working Capital' in balance_df.columns:
         A = balance_df.get('Working Capital', 0).iloc[0] / balance_df.get('Total Assets', 0).iloc[0]
+    elif 'Current Assets' in balance_df.columns and 'Current Liabilities' in balance_df.columns:
+        A = (balance_df.get('Current Assets', 0).iloc[0] - balance_df.get('Current Liabilities', 0).iloc[0]) / balance_df.get('Total Assets', 0).iloc[0]
     else:
         # in case of banks assume Working Capital = Cash - Current Debt
         A = (balance_df.get('Cash And Cash Equivalents', 0).iloc[0] - balance_df.get('Current Debt', 0).iloc[0]) / balance_df.get('Total Assets', 0).iloc[0]
-    B = balance_df.get('Retained Earnings', 0).iloc[0] / balance_df.get('Total Assets', 0).iloc[0]
+    if 'Retained Earnings' in balance_df.columns:
+        B = balance_df.get('Retained Earnings', 0).iloc[0] / balance_df.get('Total Assets', 0).iloc[0]
+    else:
+        B = income_df.get('Net Income', 0).iloc[0] / balance_df.get('Total Assets', 0).iloc[0]
     if 'EBIT' in income_df.columns:
         C = income_df.get('EBIT', 0).iloc[0] / balance_df.get('Total Assets', 0).iloc[0]
     else:
@@ -623,30 +630,43 @@ def plot_waterfall(ticker, df, quant_weights):
     plt.savefig(f"output/figures/{ticker}_waterfall.png")
     plt.close()
 
-
-def plot_ranks(df, metric):
+def plot_ranks(df, metric, base_height=0.4):
     """
-    Plot bar charts and store as png with sorted main metrics and ranks
+    Plot horizontal bar charts and store as png with sorted main metrics and ranks.
     """
-    # Create a sample DataFrame
-    index_labels = df.index
-    df = df.sort_values(by = metric)
+    # Sort the DataFrame by the metric in descending order (ranks)
+    df = df.sort_values(by=metric, ascending=False)
 
-    # Create the bar chart
-    plt.figure(figsize=(10, 6))
-    plt.bar(df.index, df[metric], color='skyblue')
+    # Get the number of bars (rows)
+    num_bars = len(df)
+
+    # Calculate the dynamic figure height: base_height * number of bars
+    # We use a minimum of 6 inches for very small datasets
+    dynamic_height = max(6, num_bars * base_height)
+
+    # Extract the sorted ticker labels
+    ticker_labels = df.index.tolist()
+
+    # Create the figure with the calculated dynamic height
+    plt.figure(figsize=(10, dynamic_height)) # 10 inches wide, dynamic height
+    
+    # Use plt.barh() for horizontal bars
+    plt.barh(ticker_labels, df[metric], color='teal')
 
     # Add labels and a title
-    plt.xlabel('Ticker')
-    plt.ylabel(metric)
-    plt.title(str('Sorted ' + metric))
+    plt.xlabel(metric)
+    plt.ylabel('Ticker')
+    plt.title(str('Sorted ' + metric + ' (Horizontal Bar Plot)'))
 
-    # Rotate x-axis labels by 45 degrees
-    plt.xticks(rotation = 45, ha='right')
+    # Set y-axis ticks to be the ticker labels
+    # ha='right' keeps the text horizontal and aligns it to the left of the plot area
+    plt.yticks(ticker_labels, ha='right') 
 
     # Add a tight layout to prevent labels from being cut off
     plt.tight_layout()
+
     # Save the plot
+    # Note: Make sure the 'output\figures' directory exists or change the path.
     plt.savefig(str("output\\figures" + "\\" + "_bar_chart_" + metric + ".png"))
     plt.show()
 
@@ -683,7 +703,7 @@ def create_pdf_report(image_folder, output_pdf, imgs = [], title = "Stock Perfor
                        "_bar_chart_pb_ratio_rank.png", "_bar_chart_ev_ebitda_rank.png", 
                        "_bar_chart_beta_rank.png", "_bar_chart_scaled_vol_rank.png",
                        "_bar_chart_accrual_rat_rank.png", "_bar_chart_cash_conv_rat_rank.png",
-                       "_bar_chart_Qual Rank.png", "_bar_chart_MOAT Quant Score.png", "_bar_chart_MOAT Text Score.png", "_bar_chart_Management Score.png", "_bar_chart_Sentiment Score.png",
+                       "_bar_chart_Qual Rank.png", "_bar_chart_MOAT_QUANT.png", "_bar_chart_MOAT_TEXT.png", "_bar_chart_MANAGEMENT.png", "_bar_chart_SENTIMENT.png",
                        "_bar_chart_External Rating Score.png"]
     else:
         image_files = []
@@ -757,6 +777,11 @@ def get_analyst_rankings_from_pdf(pdf_path, tickers, ticker_mapping):
                         rating = text[start_index:end_index]
                     else:
                         # default for not found is the starting rating, i.e. 0
+                        rating = 0
+                    # In case rating is not integer, replace with 0
+                    try:
+                        rating = int(rating)
+                    except:
                         rating = 0
                     analyst_ratings[ticker] = rating
                     logging.debug(rating)
