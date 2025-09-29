@@ -73,7 +73,7 @@ if __name__ == '__main__':
         # D/E set to negative since the lower the better
         d_e_ratio, current_ratio, quick_ratio  = calc_balance_measures(balance_df[ticker])
         # Number of years with positive EPS and FCF
-        no_y_pos_eps, no_y_pos_fcf = calc_no_y_pos_msr(income_df[ticker], 'Basic EPS'), calc_no_y_pos_msr(cash_flow_df[ticker], 'Free Cash Flow')
+        no_y_pos_eps, no_y_pos_fcf = calc_shr_y_pos_msr(income_df[ticker], 'Basic EPS'), calc_shr_y_pos_msr(cash_flow_df[ticker], 'Free Cash Flow')
         # %change in shares outstanding (negative since the largest decrease the better and vice versa)
         shares_chg = -calc_shares_change(income_df[ticker], 'Basic Average Shares')
         # Pull metrics from infos, based on type of input (online or from excel)

@@ -215,15 +215,21 @@ def calc_pos_neg_metrics(df, metric, years = 3):
     """
     growth = 0
     if len(df) >= years:
-        if df[metric].iloc[0] / df[metric].iloc[years] > 0:
-            growth = ((df[metric].iloc[0] / df[metric].iloc[years])**(1/years) - 1)
+        # both current and past metric are negative but the metric improves - assume low negative (-5%)
+        if df[metric].iloc[0] < 0 and df[metric].iloc[years] < 0 and df[metric].iloc[0] > df[metric].iloc[years]:
+            growth = -0.05
+        # both current and past metric are negative but the metric decreases - assume high negative (-30%)
+        elif df[metric].iloc[0] < 0 and df[metric].iloc[years] < 0 and df[metric].iloc[0] < df[metric].iloc[years]:
+            growth = -0.3
+        # current is positive and the past is negative (positive crossover) - assume solid positive (10%)
+        elif df[metric].iloc[0] > 0 and df[metric].iloc[years] < 0:
+            growth = 0.1
+        # current is negative and the past is positive (negative crossover) - assume solid negative (-10%)
+        elif df[metric].iloc[0] < 0 and df[metric].iloc[years] > 0:
+            growth = -0.1
         else:
-            if df[metric].iloc[0] > df[metric].iloc[years]:
-                # 10% in case turns positive from negative
-                growth = 10
-            else:
-                # -10% in case turns negative from positive
-                growth = -10         
+            growth = ((df[metric].iloc[0] / df[metric].iloc[years]) ** (1 / years) - 1)   
+            
     return growth
 def calc_income_fcf_metrics(income_df, fcf_df, years = 3):
     """
@@ -264,7 +270,11 @@ def calc_balance_measures(balance_df):
     if len(balance_df) >= 1:
         total_debt   = balance_df.get('Total Debt', 0).iloc[0]
         total_equity = balance_df.get('Stockholders Equity', 0).iloc[0]
-        d_e_ratio    = total_debt / total_equity if total_equity != 0 else 0
+        if total_equity < 0:
+            # In case of negative equity, assume very high D/E
+            d_e_ratio = 100
+        else:
+            d_e_ratio    = total_debt / total_equity if total_equity != 0 else 0
         
         if 'Current Assets' in balance_df.columns:
             current_ratio = balance_df.get('Current Assets', 0).iloc[0] / balance_df.get('Current Liabilities', 0).iloc[0]
@@ -309,8 +319,8 @@ def calc_altman_z(income_df, balance_df, market_cap):
     
     return Z_score
 
-def calc_no_y_pos_msr(df, metric):
-    return sum(df[metric] > 0)
+def calc_shr_y_pos_msr(df, metric):
+    return sum(df[metric] > 0) / len(df[metric])
 
 def calc_shares_change(df, metric):
     return (df[metric].dropna().iloc[0] / df[metric].dropna().iloc[-1] - 1)
@@ -324,12 +334,19 @@ def retrieve_info_data(info, do_quant):
 
     if do_quant:
         marketCap = info['marketCap']
-        pb_ratio = -info['priceToBook']
+        # more complicated due to few issues with denomination (pounds vs pence, dollar vs cents)
+        # !!! THERE ARE STILL ISSUES WITH P/B DATA FROM YF (E.G TSMC)
+        # MAYBE RELATED WITH NON-USD
+        if info['bookValue'] < 0:
+            # for negative book value assign high penalizing number
+            pb_ratio = -100
+        else:
+            pb_ratio = -(info['marketCap'] / info['bookValue'] / info['sharesOutstanding'] )
         ps_ratio = -info['priceToSalesTrailing12Months']
-        if 'forwardPE' in info.keys():
-            pe_ratio = -info['forwardPE']
-        elif 'trailingPE' in info.keys():
+        if 'trailingPE' in info.keys():
             pe_ratio = -info['trailingPE']
+        elif 'forwardPE' in info.keys():
+            pe_ratio = -info['forwardPE']
         else:
             pe_ratio = -100
             
@@ -344,12 +361,16 @@ def retrieve_info_data(info, do_quant):
     # different structure of input in case pulled from excel
     else:
         marketCap = info['marketCap'][0]
-        pb_ratio = -info['priceToBook'][0]
+        if info['bookValue'][0] < 0:
+            # for negative book value assign high penalizing number
+            pb_ratio = -100
+        else:
+            pb_ratio = -(info['marketCap'][0] /info['bookValue'][0] / info['sharesOutstanding'][0])
         ps_ratio = -info['priceToSalesTrailing12Months'][0]
-        if 'forwardPE' in info.keys():
-            pe_ratio = -info['forwardPE'][0]
-        elif 'trailingPE' in info.keys():
+        if 'trailingPE' in info.keys():
             pe_ratio = -info['trailingPE'][0]
+        elif 'forwardPE' in info.keys():
+            pe_ratio = -info['forwardPE'][0]
         else:
             pe_ratio = -100
             
@@ -630,26 +651,41 @@ def plot_waterfall(ticker, df, quant_weights):
     plt.savefig(f"output/figures/{ticker}_waterfall.png")
     plt.close()
 
-def plot_ranks(df, metric, base_height=0.4):
+def plot_ranks(df: pd.DataFrame, metric: str, base_height: float = 0.5, max_font_size: int = 12):
     """
-    Plot horizontal bar charts and store as png with sorted main metrics and ranks.
+    Plot horizontal bar charts with sorted main metrics and ranks, ensuring labels are visible
+    by dynamically adjusting plot height and label font size.
+
+    Args:
+        df: DataFrame containing the data. Index should be the labels (e.g., Tickers).
+        metric: The column name to plot (and sort by).
+        base_height: Base height in inches to reserve for each bar/label.
+        max_font_size: The maximum font size for the y-axis labels.
     """
-    # Sort the DataFrame by the metric in descending order (ranks)
+    # Sort the DataFrame by the metric in descending order
     df = df.sort_values(by=metric, ascending=False)
 
     # Get the number of bars (rows)
     num_bars = len(df)
 
-    # Calculate the dynamic figure height: base_height * number of bars
-    # We use a minimum of 6 inches for very small datasets
+    # --- 1. Dynamic Height Calculation (Ensuring enough vertical space) ---
+    # Increase base_height slightly to ensure more space per label
     dynamic_height = max(6, num_bars * base_height)
 
     # Extract the sorted ticker labels
     ticker_labels = df.index.tolist()
 
+    # --- 2. Dynamic Font Size (Scaling down for many labels) ---
+    # Calculate font size: smaller for more bars, up to a maximum
+    # The divisor (e.g., 20) determines how fast the font size shrinks
+    # We use a formula that starts near max_font_size and decreases as num_bars increases
+    # Example: 12 if num_bars <= 20, 8 if num_bars=50, 6 if num_bars=100
+    font_size = max(6, min(max_font_size, int(max_font_size * 25 / (num_bars + 5))))
+    # Ensure a minimum size of 6 points
+
     # Create the figure with the calculated dynamic height
     plt.figure(figsize=(10, dynamic_height)) # 10 inches wide, dynamic height
-    
+
     # Use plt.barh() for horizontal bars
     plt.barh(ticker_labels, df[metric], color='teal')
 
@@ -658,28 +694,51 @@ def plot_ranks(df, metric, base_height=0.4):
     plt.ylabel('Ticker')
     plt.title(str('Sorted ' + metric + ' (Horizontal Bar Plot)'))
 
-    # Set y-axis ticks to be the ticker labels
-    # ha='right' keeps the text horizontal and aligns it to the left of the plot area
-    plt.yticks(ticker_labels, ha='right') 
+    # --- 3. Apply Adjusted Font Size to Y-Axis Ticks ---
+    # We explicitly set the ticks and pass a dictionary for font properties
+    plt.yticks(ticker_labels, ticker_labels, fontsize=font_size)
 
-    # Add a tight layout to prevent labels from being cut off
-    plt.tight_layout()
+    # We can also adjust the left margin to make more room for long labels
+    plt.subplots_adjust(left=0.25) # Adjust left margin to 25% of the figure width for labels
+
+    # Add a tight layout to prevent labels/titles from being cut off
+    plt.tight_layout(rect=[0.2, 0, 1, 1]) # rect=[left, bottom, right, top] - leaves space on the left
 
     # Save the plot
-    # Note: Make sure the 'output\figures' directory exists or change the path.
     plt.savefig(str("output\\figures" + "\\" + "_bar_chart_" + metric + ".png"))
     plt.show()
 
-def create_pdf_report(image_folder, output_pdf, imgs = [], title = "Stock Performance Report"):
+def create_pdf_report(image_folder: str, output_pdf: str, imgs: list = None, title: str = "Stock Performance Report"):
     """
-    Combines PNG plots into a PDF with automatic descriptions.
+    Combines PNG plots into a PDF, ensuring plots are properly sized to fit 
+    both the page width AND height without distortion.
     """
+    if imgs is None:
+        imgs = []
+
+    # Define page size and available drawing area
+    PAGE_WIDTH, PAGE_HEIGHT = letter
+    
+    # Set margins (e.g., 0.5 inch on all sides)
+    MARGIN = 0.5 * inch
+    
+    # Calculate the maximum allowable space for the image to fit on the page
+    MAX_IMAGE_WIDTH = PAGE_WIDTH - 2 * MARGIN
+    # Account for space taken by the title, spacers, and description text 
+    # (estimate 2 inches for text and margins)
+    MAX_IMAGE_HEIGHT = PAGE_HEIGHT - 2 * MARGIN - 2.0 * inch 
+    
     # Create the PDF document
-    doc = SimpleDocTemplate(output_pdf, pagesize=letter)
+    doc = SimpleDocTemplate(
+        output_pdf, 
+        pagesize=letter,
+        leftMargin=MARGIN,
+        rightMargin=MARGIN,
+        topMargin=MARGIN,
+        bottomMargin=MARGIN
+    )
     
-    # Story is a list of flowables (like paragraphs, images, spacers) that will be added to the PDF
     Story = []
-    
     styles = getSampleStyleSheet()
     title_style = styles['Title']
     heading_style = styles['Heading2']
@@ -688,10 +747,10 @@ def create_pdf_report(image_folder, output_pdf, imgs = [], title = "Stock Perfor
     
     # Add a title page
     Story.append(Paragraph(title, title_style))
-    Story.append(Spacer(1, 0.5*inch))
+    Story.append(Spacer(1, 0.5 * inch))
     
-    # Get a list of all PNG files in the folder and sort them
-    if imgs == []:
+    # List of all PNG files (trimmed for conciseness here)
+    if not imgs:
         image_files = ["_bar_chart_Final Rank.png", 
                        "_bar_chart_Quant Rank.png", "_bar_chart_revenue_growth_rank.png", "_bar_chart_eps_growth_rank.png",
                        "_bar_chart_gross_margin_avg_rank.png", "_bar_chart_net_margin_avg_rank.png", 
@@ -706,32 +765,63 @@ def create_pdf_report(image_folder, output_pdf, imgs = [], title = "Stock Perfor
                        "_bar_chart_Qual Rank.png", "_bar_chart_MOAT_QUANT.png", "_bar_chart_MOAT_TEXT.png", "_bar_chart_MANAGEMENT.png", "_bar_chart_SENTIMENT.png",
                        "_bar_chart_External Rating Score.png"]
     else:
-        image_files = []
-        for ticker in imgs:
-            image_files.append(str(ticker + "_waterfall.png"))
-            
+        image_files = [f"{ticker}_waterfall.png" for ticker in imgs]
+        
 
     for img_file in image_files:
         img_path = os.path.join(image_folder, img_file)
-        # Force a page break
-        Story.append(PageBreak())
-        # Add a heading for the current plot
-        Story.append(Paragraph(f"Analysis of {img_file}", heading_style))
-        Story.append(Spacer(1, 0.2*inch))
         
-        # Add the plot image to the PDF
-        img = RLImage(img_path)
-        img.drawHeight = 4*inch
-        img.drawWidth = 6*inch
-        Story.append(img)
-        Story.append(Spacer(1, 0.2*inch))
+        if not os.path.exists(img_path):
+            logging.warning(f"Image file not found: {img_path}. Skipping.")
+            continue
+            
+        try:
+            # 1. Read the original image to get its dimensions
+            original_img = Image.open(img_path)
+            orig_width, orig_height = original_img.size
+            aspect_ratio = orig_height / orig_width
+            
+            # --- THE FIX: Check against both width and height limits ---
+            
+            # Start by sizing to max width (as this is usually the critical dimension for horizontal charts)
+            new_width = MAX_IMAGE_WIDTH
+            new_height = new_width * aspect_ratio
+            
+            # If the calculated height is too large for the page, resize based on height instead
+            if new_height > MAX_IMAGE_HEIGHT:
+                new_height = MAX_IMAGE_HEIGHT
+                new_width = new_height / aspect_ratio # Recalculate width to maintain ratio
+            
+            # Force a page break before the new image
+            Story.append(PageBreak())
+            
+            # Add a heading for the current plot
+            Story.append(Paragraph(
+                f"Analysis of {img_file.replace('_bar_chart_', '').replace('.png', '').replace('_', ' ').title()}", 
+                heading_style
+            ))
+            Story.append(Spacer(1, 0.2 * inch))
+            
+            # Add the plot image to the PDF with the calculated dimensions
+            img = RLImage(img_path)
+            img.drawWidth = new_width
+            img.drawHeight = new_height
+            Story.append(img)
+            
+            Story.append(Spacer(1, 0.2 * inch))
+            
+            # Generate and add the description (currently empty)
+            description = ""
+            Story.append(Paragraph(description, body_style))
+            Story.append(Spacer(1, 0.5 * inch))
+            Story.append(Paragraph("-" * 50, body_style)) # Add a separator
         
-        # Generate and add the description
-        description = ""
-        Story.append(Paragraph(description, body_style))
-        Story.append(Spacer(1, 0.5*inch))
-        Story.append(Paragraph("-" * 50, body_style)) # Add a separator
-        
+        except Exception as e:
+            logging.error(f"Failed to process image {img_file}: {e}")
+            Story.append(PageBreak())
+            Story.append(Paragraph(f"ERROR: Could not load or process image: {img_file}", styles['Error']))
+
+
     # Build the PDF document
     doc.build(Story)
     logging.info(f"PDF report '{output_pdf}' created successfully!")
